@@ -12,7 +12,7 @@ namespace FastSinusoids
 {
 	void Init()
 	{
-		#ifdef BHASKARA_I_APPROX
+		#ifndef BHASKARA_I_APPROX
 		for (uint32_t i = 0; i < fastCosTabSize + 1; i++)
 		{
 			const auto phase = static_cast<double>(i) * M_PI * 2.0 / static_cast<double>(fastCosTabSize);
