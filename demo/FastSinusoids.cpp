@@ -2,21 +2,37 @@
 
 #include <cstdint>
 
+#ifndef BHASKARA_I_APPROX
 static inline constexpr uint32_t fastCosTabLog2Size = 10; // size = 1024
 static inline constexpr uint32_t fastCosTabSize = 1 << fastCosTabLog2Size;
 static double fastCosTab[fastCosTabSize + 1];
+#endif
 
 namespace FastSinusoids
 {
 	void Init()
 	{
+		#ifdef BHASKARA_I_APPROX
 		for (uint32_t i = 0; i < fastCosTabSize + 1; i++)
 		{
 			const auto phase = static_cast<double>(i) * M_PI * 2.0 / static_cast<double>(fastCosTabSize);
 			fastCosTab[i] = cos(phase);
 		}
+		#endif // BHASKARA_I_APPROX
 	}
 
+	#ifdef BHASKARA_I_APPROX
+	double Sin(double x)
+	{
+		const auto rotations = x * 1.0 / (M_PI * 2.0);
+		const auto half_circle = 2 * rotations - floor(2 * rotations);
+		const auto parabola = half_circle * (1-half_circle);
+		return copysign(
+			4 * parabola / (1.25 - parabola),
+			0.5 + floor(rotations) - rotations
+		);
+	}
+	#else // BHASKARA_I_APPROX
 	double Cos(double x)
 	{
 		x = fabs(x); // cosine is symmetrical around 0, let's get rid of negative values
@@ -42,4 +58,5 @@ namespace FastSinusoids
 		const auto fractMix = fract * (1.0 / fractScale);
 		return left + (right - left) * fractMix;
 	}
+	#endif // BHASKARA_I_APPROX
 }
