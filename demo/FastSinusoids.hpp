@@ -3,6 +3,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+#define BHASKARA_I_APPROX
+
 namespace FastSinusoids
 {
 	void Init();
