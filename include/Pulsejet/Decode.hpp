@@ -163,14 +163,14 @@ namespace Pulsejet
 					auto dco_phase_s = SinF(phase);
 					// dco_value is unit angle, calculated by squaring phase angle
 					auto dco_value_c = dco_phase_c * dco_phase_c - dco_phase_s * dco_phase_s;
-					auto dco_value_s = 2.f * dco_phase_c * sco_phase_s;
+					auto dco_value_s = 2.f * dco_phase_c * dco_phase_s;
 					for (uint32_t k = 0; k < subframeWindowSize / 2; k++)
 					{
 						sample += (2.0f / static_cast<float>(subframeWindowSize / 2)) * windowBins[k] * dco_value_c;
 						// Advance dco_value by one unit using phase rotation
 						auto dco_value_c_new = dco_value_c * dco_phase_c - dco_value_s * dco_phase_s;
 						dco_value_s = dco_value_s * dco_phase_c + dco_value_c * dco_phase_s;
-						dco_value_c = dco_value_new;
+						dco_value_c = dco_value_c_new;
 					}
 					// TODO: Expand Mdctwindow, as it also includes an incrementing SinF. Also includes another SinF that can not be converted to an oscillator - but might be amenable to swapping for a spline polynomial.
 					auto window = MdctWindow(n, subframeWindowSize, windowMode);
