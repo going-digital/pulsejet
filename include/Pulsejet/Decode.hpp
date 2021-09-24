@@ -184,9 +184,6 @@ namespace Pulsejet
 					auto window = MdctWindow(n, subframeWindowSize, windowMode);
 					paddedSamples[frameOffset + windowOffset + n] += sample * window;
 				}
-
-				#endif
-
 			}
 		}
 
