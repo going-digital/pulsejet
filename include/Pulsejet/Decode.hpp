@@ -148,47 +148,45 @@ namespace Pulsejet
 				// Apply the IMDCT to the subframe bins, then apply the appropriate window to the resulting samples, and finally accumulate them into the padded output buffer
 				const auto frameOffset = frameIndex * FrameSize;
 				const auto windowOffset = subframeWindowOffset + subframeIndex * subframeWindowSize / 2;
-				#ifdef CUSTOM_IDCT
-				// Replace cosine calculations with a rotating vector. Converts 1 x cos into 4 x multiply and 2 x add
-				// See https://ccrma.stanford.edu/~jos/wgo/wgo.pdf
-				// TODO: Similar substitution in this loop - replace dco_phase_c and dco_phase_s with outer DCO
+
+
 				for (uint32_t n = 0; n < subframeWindowSize; n++)
 				{
 					const auto nPlusHalf = static_cast<float>(n) + 0.5f;
 					auto sample = 0.0f;
-					// TODO: Test this with audio
+
+					#ifdef FAST_MDCT
+
+					// Generate cosine values using a Direct-Form Resonator
+					// See https://ccrma.stanford.edu/~jos/wgo/Introduction.html
 					auto phase = static_cast<float>(M_PI) / static_cast<float>(subframeWindowSize / 2) * (nPlusHalf + static_cast<float>(subframeWindowSize / 4)) * 0.5f;
-					// dco_phase is half unit angle
-					auto dco_phase_c = CosF(phase);
+					auto dco_phase_c = CosF(phase); // Set initial conditions for first cosine
 					auto dco_phase_s = SinF(phase);
-					// dco_value is unit angle, calculated by squaring phase angle
-					auto dco_value_c = dco_phase_c * dco_phase_c - dco_phase_s * dco_phase_s;
-					auto dco_value_s = 2.f * dco_phase_c * dco_phase_s;
+					// Set unit vector to multiply phasor with. It is twice the initial angle, so square that vector.
+					const auto dco_value_c = dco_phase_c * dco_phase_c - dco_phase_s * dco_phase_s;
+					const auto dco_value_s = 2.f * dco_phase_c * dco_phase_s;
 					for (uint32_t k = 0; k < subframeWindowSize / 2; k++)
 					{
-						sample += (2.0f / static_cast<float>(subframeWindowSize / 2)) * windowBins[k] * dco_value_c;
+						sample += (2.0f / static_cast<float>(subframeWindowSize / 2)) * windowBins[k] * dco_phase_c;
 						// Advance dco_value by one unit using phase rotation
-						auto dco_value_c_new = dco_value_c * dco_phase_c - dco_value_s * dco_phase_s;
-						dco_value_s = dco_value_s * dco_phase_c + dco_value_c * dco_phase_s;
-						dco_value_c = dco_value_c_new;
+						auto dco_phase_c_new = dco_phase_c * dco_value_c - dco_phase_s * dco_value_s;
+						dco_phase_s = dco_phase_s * dco_value_c + dco_phase_c * dco_value_s;
+						dco_phase_c = dco_phase_c_new;
 					}
-					// TODO: Expand Mdctwindow, as it also includes an incrementing SinF. Also includes another SinF that can not be converted to an oscillator - but might be amenable to swapping for a spline polynomial.
-					auto window = MdctWindow(n, subframeWindowSize, windowMode);
-					paddedSamples[frameOffset + windowOffset + n] += sample * window;
-				}
-				#else
-				for (uint32_t n = 0; n < subframeWindowSize; n++)
-				{
-					const auto nPlusHalf = static_cast<float>(n) + 0.5f;
 
-					auto sample = 0.0f;
+					#else // FAST_MDCT
+
 					for (uint32_t k = 0; k < subframeWindowSize / 2; k++)
 						sample += (2.0f / static_cast<float>(subframeWindowSize / 2)) * windowBins[k] * CosF(static_cast<float>(M_PI) / static_cast<float>(subframeWindowSize / 2) * (nPlusHalf + static_cast<float>(subframeWindowSize / 4)) * (static_cast<float>(k) + 0.5f));
 
+					#endif // FAST_MDCT
+
 					auto window = MdctWindow(n, subframeWindowSize, windowMode);
 					paddedSamples[frameOffset + windowOffset + n] += sample * window;
 				}
+
 				#endif
+
 			}
 		}
 

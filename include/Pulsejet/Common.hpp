@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdint>
 
+#define FAST_MDCT // Generate MDCT cosines from digital oscillator instead of table lookup
+
 namespace Pulsejet::Internal
 {
 	using namespace Shims;

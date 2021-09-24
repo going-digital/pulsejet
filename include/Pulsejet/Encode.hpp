@@ -168,13 +168,39 @@ namespace Pulsejet
 					}
 
 					// Perform MDCT
+
 					for (uint32_t k = 0; k < subframeSize; k++)
 					{
 						float bin = 0.0f;
+
+						#ifdef FAST_MDCT
+
+						// Generate cosine values using a Direct-Form Resonator
+						// See https://ccrma.stanford.edu/~jos/wgo/Introduction.html
+						auto phase = static_cast<float>(M_PI) / static_cast<float>(subframeSize) * (static_cast<float>(k) + 0.5f) * (0.5f + static_cast<float>(subframeSize / 2));
+						auto dco_phase_c = CosF(phase);
+						auto dco_phase_s = SinF(phase);
+						const auto dco_value_c = CosF(static_cast<float>(M_PI) / static_cast<float>(subframeSize) * (static_cast<float>(k) + 0.5f));
+						const auto dco_value_s = SinF(static_cast<float>(M_PI) / static_cast<float>(subframeSize) * (static_cast<float>(k) + 0.5f));
+						for (uint32_t n = 0; n < subframeWindowSize; n++)
+						{
+							bin += windowedSamples[n] * dco_phase_c;
+							const auto dco_phase_c_new = dco_phase_c * dco_value_c - dco_phase_s * dco_value_s;
+							dco_phase_s = dco_phase_s * dco_value_c + dco_phase_c * dco_value_s;
+							dco_phase_c = dco_phase_c_new;
+						}
+
+						#else // FAST_MDCT
+
 						for (uint32_t n = 0; n < subframeWindowSize; n++)
 							bin += windowedSamples[n] * CosF(static_cast<float>(M_PI) / static_cast<float>(subframeSize) * (static_cast<float>(n) + 0.5f + static_cast<float>(subframeSize / 2)) * (static_cast<float>(k) + 0.5f));
+
+						#endif // FAST_MDCT
+
 						windowBins.push_back(bin);
 					}
+
+
 				}
 
 				// Search (exhaustively) for an appropriate bin quantization scaling factor
